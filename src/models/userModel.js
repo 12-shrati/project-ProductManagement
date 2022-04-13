@@ -5,11 +5,13 @@ const mongoose = require('mongoose')
 const userSchema = new mongoose.Schema({ 
     fname: {
         type: String, 
-        required: true
+        required: true,
+        trim:true
     },
     lname: {
         type: String, 
-        required: true
+        required: true,
+        trim:true
     },
     email: {
         type: String, 
@@ -23,23 +25,27 @@ const userSchema = new mongoose.Schema({
     phone: {
         type: String, 
         required: true,
-        unique: true
+        unique: true,
+        trim:true
     }, 
     password: {
         type: String, 
         required: true,
         minLen: 8,
-        maxLen: 15
+        maxLen: 15,
+        trim:true
     }, // encrypted password
     address: {
       shipping: {
         street: {
             type: String, 
-            required: true
+            required: true,
+            trim:true
         },
         city: {
             type: String, 
-            required: true
+            required: true,
+            trim:true
         },
         pincode: {
             type: Number, 
@@ -49,11 +55,13 @@ const userSchema = new mongoose.Schema({
       billing: {
         street: {
             type: String, 
-            required: true
+            required: true,
+            trim:true
         },
         city: {
             type: String, 
-            required: true
+            required: true,
+            trim:true
         },
         pincode: {
             type: Number, 

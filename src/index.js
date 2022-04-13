@@ -14,7 +14,7 @@ app.use(multer().any())
 const mongoose = require('mongoose')
 
 mongoose.connect(
-    "mongodb+srv://CCAnkit:CCAnkit09@clusternew.gds9x.mongodb.net/group35Database", 
+    "mongodb+srv://shrati:65FywNUvGdDH49SQ@cluster0.tpfb4.mongodb.net/group35-Database", 
     {useNewUrlParser: true,useUnifiedTopology: true,  useCreateIndex: true}
 )
     .then(() => console.log('mongodb is connected'))
