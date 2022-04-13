@@ -24,7 +24,7 @@ let isValidateSize = function (value) {
 }
 
 
-
+//--------------------------------------------------------------------------------------------------------------
 
 const createProduct = async (req, res) => {
     try {
@@ -101,40 +101,70 @@ const createProduct = async (req, res) => {
     }
 }
 
+//---------------------------------------------------------------------------------------------------------------------
 
-let getProductsByfilter=async function(req,res){
+let getProductsByfilter = async function (req, res) {
     try {
-       let productData=await productModel.find({isDeleted:false})
-       if(productData){
-       return res.status(200).send({status:false,message:"Product Details are not deleted",data:productData})
-       }
-      let data=req.query
-      const {size,name,price}=data
-      filteredQuery={isdeleted:false}
+        const QueryParam = req.query
+        const { size, name, priceGreaterThan, priceLesserThan, priceSort } = QueryParam
 
-      if(isValid(size)){
-       filteredQuery['availableSizes']=size
-      }
-
-      if(isValid(name)){
-        filteredQuery['title']=name
-       }
-
-       const products = await productModel.find(filteredQuery)
-
-
-        if (Array.isArray(products) && products.length === 0) {
-            return res.status(400).send({ status: false, message: "No data Available" })
+        if (!isValidRequestBody(QueryParam)) {
+            const productsNotDeleted = await productModel.find({ isDeleted: false }).sort({ title: 1 })
+            return res.status(200).send({ status: true, data: productsNotDeleted })
         }
-        res.status(200).send({ status: true, message: 'products list', data: products })
+
+        const filter = { isDeleted: false }
+
+        if (size) {
+            for (let i = 0; i < size.length; i++) {
+                if (["S", "XS", "M", "X", "L", "XXL", "XL"].includes(size[i])) {
+                    filter['availableSizes'] = size
+                }
+            }
+        }
+
+        if (priceGreaterThan) {
+            filter['price'] = { $gt: priceGreaterThan }
+        }
+
+        if (priceLesserThan) {
+            filter['price'] = { $lt: priceLesserThan }
+        }
+        if (priceGreaterThan && priceLesserThan) {
+            filter['price'] = { $gt: priceGreaterThan, $lt: priceLesserThan }
+        }
+
+        if (priceSort) {
+            if (priceSort != 1 || priceSort != -1) {
+                return res.status(400).send({ status: false, message: "You can sort price by using 1 and -1" })
+            }
+        }
+
+        if (size || priceGreaterThan || priceLesserThan || (priceGreaterThan && priceLesserThan)) {
+            const productsData = await productModel.find(filter).sort({ price: priceSort })
+
+            if (productsData.length == 0) {
+                return res.status(400).send({ status: false, message: "No product Exist" })
+            }
+            return res.status(200).send({ status: true, message: 'product list', data: productsData })
+        }
+
+        if (isValid(name)) {
+            let findName = await productModel.find({ title: { $regex: name, $options: 'i' }, isDeleted: false })
+            if (findName!=0) {
+                return res.status(200).send({ status: true, message: "Success", data: findName }).sort({ price: priceSort })
+            }else{
+            return res.status(400).send({ status: false, message: "No product Exist" })
+        }
+     }
+
     }
-    
     catch (error) {
         return res.status(500).send({ status: false, message: error.message })
     }
 }
 
-
+//--------------------------------------------------------------------------------------------------------------------------
 
 let getProductsById = async function (req, res) {
     try {
@@ -148,8 +178,12 @@ let getProductsById = async function (req, res) {
 
         let productData = await productModel.findOne({ _id: productId, isDeleted: false })
         if (!productData) {
-            return res.status(404).send({ status: false, message: "product not present in the collection or it is already Deleted" })
+            return res.status(404).send({ status: false, message: "product not present in the collection" })
         }
+        if (productData.isDeleted == true) {
+            return res.status(400).send({ status: false, message: "product already Deleted" })
+        }
+
 
         return res.status(200).send({ status: true, message: "Product details", data: productData })
 
@@ -160,7 +194,7 @@ let getProductsById = async function (req, res) {
 }
 
 
-
+//============================================================================================================================
 
 
 const updatedProducts = async function (req, res) {
@@ -173,14 +207,16 @@ const updatedProducts = async function (req, res) {
             return res.status(400).send({ status: false, message: "UserId not a valid ObjectId" })
         }
 
-        let productData = await productModel.findOne({ _id: productId, isDeleted: false })
+        let productData = await productModel.findOne({ _id: productId })
         if (!productData) {
             return res.status(404).send({ status: false, message: "product not present in the collection" })
         }
 
-
+        if (productData.isDeleted == true) {
+            return res.status(400).send({ status: false, message: "product already Deleted" })
+        }
         let data = req.body
-        const { title, description, price, currencyId, currencyFormat, productImage, availableSizes, style, installments } = data
+        const { title, description, price, currencyId, productImage, availableSizes, style, installments } = data
 
         let updatedData = {}
         if (!isValidRequestBody(data)) { return res.status(400).send({ status: false, message: "Enter value to be updating..." }) }
@@ -220,13 +256,17 @@ const updatedProducts = async function (req, res) {
             }
             updatedData['description'] = description
         }
+
         let files = req.files
         if (files && files.length > 0) {
             let uploadedFileURL = await s3.uploadFile(files[0])
             data['productImage'] = uploadedFileURL
-        }
-        updatedData['productImage'] = data.productImage
 
+            updatedData['productImage'] = data.productImage
+        } else {
+
+            updatedData['productImage'] = productData.productImage
+        }
 
         if (currencyId) {
             if (!isValid(currencyId)) {
@@ -264,10 +304,10 @@ const updatedProducts = async function (req, res) {
 }
 
 
+//====================================================================================================================
 
-
-let deleteProducts=async function(req,res){
-    try{
+let deleteProducts = async function (req, res) {
+    try {
         let productId = req.params.productId
 
         if (!productId) { return res.status(400).send({ status: false, message: "productId required" }) }
@@ -276,12 +316,16 @@ let deleteProducts=async function(req,res){
             return res.status(400).send({ status: false, message: "productId not a valid ObjectId" })
         }
 
-        let productData = await productModel.findOne({ _id: productId, isDeleted: false })
+        let productData = await productModel.findOne({ _id: productId })
         if (!productData) {
-            return res.status(404).send({ status: false, message: "product not present in the collection or it is already Deleted" })
+            return res.status(404).send({ status: false, message: "product not present in the collection" })
+        }
+        if (productData.isDeleted == true) {
+            return res.status(400).send({ status: false, message: "product  already Deleted" })
         }
 
-        let deletedProductDetails = await productModel.findByIdAndUpdate(productId, { $set:{isDeleted:true,deletedAt:Date() }}, { new: true })
+
+        let deletedProductDetails = await productModel.findByIdAndUpdate(productId, { $set: { isDeleted: true, deletedAt: Date() } }, { new: true })
         return res.status(200).send({ status: true, message: "product deleted successfully", data: deletedProductDetails })
     }
     catch (error) {
@@ -291,4 +335,4 @@ let deleteProducts=async function(req,res){
 
 
 
-module.exports = { createProduct,getProductsByfilter, getProductsById, updatedProducts ,deleteProducts}
+module.exports = { createProduct, getProductsByfilter, getProductsById, updatedProducts, deleteProducts }

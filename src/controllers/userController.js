@@ -2,7 +2,7 @@ const userModel = require("../models/userModel")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const mongoose = require('mongoose')
-let s3=require('../s3/aws')
+let s3 = require('../s3/aws')
 
 const isValid = function (value) {
     if (typeof value === "undefined" || value === null) return false
@@ -32,24 +32,19 @@ let validateString = function (value) {
     return /^\S*$/.test(value)
 }
 
-let isValidPincode=function(value){
-    if(!isNaN(value)  && value.toString().length == 6 ) return true
+let isValidPincode = function (value) {
+    if (!isNaN(value) && value.toString().length == 6) return true
 }
 
 const createUser = async (req, res) => {
     try {
-        const query = req.query
-        if (Object.keys(query) != 0) {
-            return res.status(400).send({ status: false, message: "Invalid params present in URL" })
-        }
-
         let data = req.body
         if (!isValidRequestBody(data)) {
             return res.status(400).send({ status: false, message: "Please enter your details to register" })
         }
 
         const { fname, lname, email, profileImage, phone, password, address } = data
-       
+
         if (!isValid(fname)) {
             return res.status(400).send({ status: false, message: "fname is required" })
         }
@@ -139,10 +134,10 @@ const createUser = async (req, res) => {
         }
 
         if (!isValidPincode(address.shipping.pincode)) {
-            return res.status(400).send({ status: false, message: "Please only enter numeric characters for Shipping pincode" })
+            return res.status(400).send({ status: false, message: "Pincode should be numeric and length is 6" })
         }
-        
-        
+    
+
         if (!isValid(address.billing.street)) {
             return res.status(400).send({ status: false, message: "Billing Street is required" })
         }
@@ -153,7 +148,7 @@ const createUser = async (req, res) => {
             return res.status(400).send({ status: false, message: "Billing pincode is required" })
         }
         if (!isValidPincode(address.billing.pincode)) {
-            return res.status(400).send({ status: false, message: "Please only enter numeric characters for Billing pincode" })
+            return res.status(400).send({ status: false, message: "Pincode should be numeric and length is 6" })
         }
 
         //If all these validations passed , registering a user
@@ -167,16 +162,10 @@ const createUser = async (req, res) => {
     }
 }
 
-
+//------------------------------------------------------------------------------------------------------------------------
 
 const loginUser = async (req, res) => {
     try {
-        const query = req.query
-        // console.log(query)
-        if (Object.keys(query) != 0) {
-            return res.status(400).send({ status: false, message: "Invalid params present in URL" })
-        }
-
         //Checking if no data is present in our request
         let data = req.body
         if (!isValidRequestBody(data)) {
@@ -193,7 +182,6 @@ const loginUser = async (req, res) => {
         if (!validateEmail(email)) {
             return res.status(400).send({ status: false, message: "Please enter a valid email" })
         }
-
 
         if (!isValid(password)) {
             return res.status(400).send({ status: false, message: "Password is required" })
@@ -223,7 +211,7 @@ const loginUser = async (req, res) => {
         return res.status(200).send({
             status: true, message: "You are successfully logged in",
             data: {
-                userId: token.userId,
+                userId: userMatch._id,
                 token: token
             }
         })
@@ -236,7 +224,7 @@ const loginUser = async (req, res) => {
 }
 
 
-
+//-----------------------------------------------------------------------------------------------------------------------
 
 
 const getProfile = async function (req, res) {
@@ -267,7 +255,7 @@ const getProfile = async function (req, res) {
     }
 }
 
-
+//-----------------------------------------------------------------------------------------------------------------------------
 
 const updateProfile = async function (req, res) {
     try {
@@ -288,29 +276,19 @@ const updateProfile = async function (req, res) {
             return res.status(403).send({ status: false, message: "User is not Authorized" })
         }
         let data = req.body
-        const { fname, lname, email, profileImage, phone, password, address } = data
-        
+        const { fname, lname, email, phone, password, address } = data
+
         let updatedData = {}
         if (!isValidRequestBody(data)) { return res.status(400).send({ status: false, message: "Enter value to be updating..." }) }
 
-        if (fname) {
-            if (!isValid(fname)) {
-                return res.status(400).send({ status: false, msg: "fname is not in valid format" })
-            }
+        if (isValid(fname)) {
             updatedData['fname'] = fname
         }
 
-        if (lname) {
-            if (!isValid(lname)) {
-                return res.status(400).send({ status: false, msg: "lname is not in valid format" })
-            }
+        if (isValid(lname))
             updatedData['lname'] = lname
-        }
 
         if (email) {
-            if (!isValid(email)) {
-                return res.status(400).send({ status: false, msg: "email is not in valid format" })
-            }
             if (!validateEmail(email)) {
                 return res.status(400).send({ status: false, msg: "Invalid Email address" })
             }
@@ -321,24 +299,18 @@ const updateProfile = async function (req, res) {
             updatedData['email'] = email
         }
 
-
-        
-            let files = req.files
-            if (files && files.length > 0) {
-                //upload to s3 and get the uploaded link
-                // res.send the link back to frontend/postman
-                let uploadedFileURL = await s3.uploadFile(files[0])
-                data['profileImage'] = uploadedFileURL
-            }
-                updatedData['profileImage'] = data.profileImage
-            
-        
-
+        let files = req.files
+        if (files && files.length > 0) {
+            //upload to s3 and get the uploaded link
+            // res.send the link back to frontend/postman
+            let uploadedFileURL = await s3.uploadFile(files[0])
+            data['profileImage'] = uploadedFileURL
+            updatedData['profileImage'] = data.profileImage
+        } else {
+            updatedData['profileImage'] = userData.profileImage
+        }
 
         if (phone) {
-            if (!isValid(phone)) {
-                return res.status(400).send({ status: false, msg: "phone is not in valid format" })
-            }
             if (!validatephone(phone)) {
                 return res.status(400).send({ status: false, msg: "Invalid PhoneNumber" })
             }
@@ -350,13 +322,18 @@ const updateProfile = async function (req, res) {
         }
 
         if (password) {
-            if (!isValid(password)) {
-                return res.status(400).send({ status: false, msg: "password is required" })
-            }
             if (password.length < 8 || password.length > 15) {
                 return res.status(400).send({ status: false, message: "The length of password should be in between 8-15 characters" })
             }
-            updatedData['password'] = password
+            if (!validateString(password)) {
+                return res.status(400).send({ status: false, message: "Spaces are not allowed in password" })
+            }
+
+            const salt = bcrypt.genSaltSync(10);
+            const hashedPassword = bcrypt.hashSync(password, salt);
+            data.password = hashedPassword
+
+            updatedData['password'] = data.password
         }
 
 
@@ -372,10 +349,10 @@ const updateProfile = async function (req, res) {
                 if (isValid(address.shipping.pincode)) {
 
                     if (!isValidPincode(address.shipping.pincode)) {
-                        return res.status(400).send({ status: false, message: "Please only enter numeric characters for pincode" })
+                        return res.status(400).send({ status: false, message: "Pincode should be numeric and length is 6" })
                     }
                     updatedData['address.shipping.pincode'] = address.shipping.pincode
-                    
+
                 }
             }
             if (isValid(address.billing)) {
@@ -389,14 +366,13 @@ const updateProfile = async function (req, res) {
                 if (isValid(address.billing.pincode)) {
 
                     if (!isValidPincode(address.billing.pincode)) {
-                        return res.status(400).send({ status: false, message: "Please only enter numeric characters for pincode" })
+                        return res.status(400).send({ status: false, message: "Pincode should be numeric and length is 6" })
                     }
                     updatedData['address.billing.pincode'] = address.billing.pincode
                 }
             }
 
         }
-
 
         let updatedDetails = await userModel.findByIdAndUpdate(userId, { $set: updatedData }, { new: true })
         return res.status(200).send({ status: true, message: "User profile updated", data: updatedDetails })
