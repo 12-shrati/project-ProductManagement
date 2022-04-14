@@ -122,6 +122,7 @@ const createUser = async (req, res) => {
         const salt = bcrypt.genSaltSync(10);
         const hashedPassword = bcrypt.hashSync(password, salt);
         data.password = hashedPassword
+        
 
         if (!isValid(address.shipping.street)) {
             return res.status(400).send({ status: false, message: "Shipping Street is required" })
@@ -276,17 +277,32 @@ const updateProfile = async function (req, res) {
             return res.status(403).send({ status: false, message: "User is not Authorized" })
         }
         let data = req.body
-        const { fname, lname, email, phone, password, address } = data
+        const { fname, lname, email, phone,profileImage, password, address } = data
 
         let updatedData = {}
         if (!isValidRequestBody(data)) { return res.status(400).send({ status: false, message: "Enter value to be updating..." }) }
 
         if (isValid(fname)) {
+            if (!(/^[A-Za-z\s]+$/).test(fname)) {
+                return res.status(400).send({ status: false, message: "Please mention valid firstName" })
+            }
+    
+            if (!validateString(fname)) {
+                return res.status(400).send({ status: false, message: "Spaces are not allowed in fname" })
+            }
             updatedData['fname'] = fname
         }
 
-        if (isValid(lname))
+        if (isValid(lname)){
+            if (!(/^[A-Za-z\s]+$/).test(lname)) {
+                return res.status(400).send({ status: false, message: "Please mention valid lastname" })
+            }
+    
+            if (!validateString(lname)) {
+                return res.status(400).send({ status: false, message: "Spaces are not allowed in lname" })
+            }
             updatedData['lname'] = lname
+        }
 
         if (email) {
             if (!validateEmail(email)) {
@@ -307,8 +323,11 @@ const updateProfile = async function (req, res) {
             data['profileImage'] = uploadedFileURL
             updatedData['profileImage'] = data.profileImage
         } else {
+            
             updatedData['profileImage'] = userData.profileImage
+            
         }
+        
 
         if (phone) {
             if (!validatephone(phone)) {

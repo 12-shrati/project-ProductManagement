@@ -122,6 +122,19 @@ let getProductsByfilter = async function (req, res) {
                 }
             }
         }
+        let productName = []
+        if (name!=null) {
+            const productTitle = await productModel.find({ isDeleted: false }).select({ title: 1, _id: 0 })
+            for (let i = 0; i < productTitle.length; i++) {
+                var checkTitle = productTitle[i].title
+
+                let includeChar = checkTitle.includes(name)
+                if (includeChar) 
+                productName.push(checkTitle)
+            
+            filter['title'] = productName
+            }
+        }
 
         if (priceGreaterThan) {
             filter['price'] = { $gt: priceGreaterThan }
@@ -140,24 +153,13 @@ let getProductsByfilter = async function (req, res) {
             }
         }
 
-        if (size || priceGreaterThan || priceLesserThan || (priceGreaterThan && priceLesserThan)) {
             const productsData = await productModel.find(filter).sort({ price: priceSort })
 
             if (productsData.length == 0) {
                 return res.status(400).send({ status: false, message: "No product Exist" })
             }
             return res.status(200).send({ status: true, message: 'product list', data: productsData })
-        }
-
-        if (isValid(name)) {
-            let findName = await productModel.find({ title: { $regex: name, $options: 'i' }, isDeleted: false })
-            if (findName!=0) {
-                return res.status(200).send({ status: true, message: "Success", data: findName }).sort({ price: priceSort })
-            }else{
-            return res.status(400).send({ status: false, message: "No product Exist" })
-        }
-     }
-
+        
     }
     catch (error) {
         return res.status(500).send({ status: false, message: error.message })
@@ -221,10 +223,7 @@ const updatedProducts = async function (req, res) {
         let updatedData = {}
         if (!isValidRequestBody(data)) { return res.status(400).send({ status: false, message: "Enter value to be updating..." }) }
 
-        if (title) {
-            if (!isValid(title)) {
-                return res.status(400).send({ status: false, msg: "title is required" })
-            }
+        if (isValid(title)) {
             let uniqueTitle = await productModel.findOne({ title: title })
             if (uniqueTitle) {
                 return res.status(400).send({ status: false, message: "Title already exists" })
@@ -232,28 +231,18 @@ const updatedProducts = async function (req, res) {
             updatedData['title'] = title
         }
 
-        if (description) {
-            if (!isValid(description)) {
-                return res.status(400).send({ status: false, msg: "description required" })
-            }
+        if (isValid(description)) {
             updatedData['description'] = description
         }
 
-        if (price) {
-            if (!isValid(price)) {
-                return res.status(400).send({ status: false, msg: "price is not in valid format" })
-            }
+        if (isValid(price)) {
             if (!/^\d+(?:\.\d{1,2})?$/.test(price)) {
                 return res.status(400).send({ status: false, message: "Enter valid price" })
             }
-
             updatedData['price'] = price
         }
 
-        if (description) {
-            if (!isValid(description)) {
-                return res.status(400).send({ status: false, msg: "description required" })
-            }
+        if (isValid(description)) {
             updatedData['description'] = description
         }
 
@@ -268,17 +257,11 @@ const updatedProducts = async function (req, res) {
             updatedData['productImage'] = productData.productImage
         }
 
-        if (currencyId) {
-            if (!isValid(currencyId)) {
-                return res.status(400).send({ status: false, msg: "currencyId is not in valid format" })
-            }
+        if (isValid(currencyId)) {
             updatedData['currencyId'] = currencyId
         }
 
-        if (availableSizes) {
-            if (!isValid(availableSizes)) {
-                return res.status(400).send({ status: false, msg: "availableSizes is required" })
-            }
+        if (isValid(availableSizes)) {
             if (!isValidateSize(availableSizes)) {
                 return res.status(400).send({ status: false, message: "Availablesize atleast one of the size in S, XS, M, X, L, XXL, XL" })
             }

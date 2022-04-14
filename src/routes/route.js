@@ -28,5 +28,25 @@ router.put("/products/:productId", productController.updatedProducts);
 
 router.delete("/products/:productId", productController.deleteProducts);
 
+//-------------------------------------------------------------------------------------------------------------------
+
+//Cart
+
+// router.post("/users/:userId/cart", );
+
+// router.put("/users/:userId/cart", );
+     
+// router.get("/users/:userId/cart", );
+
+// router.delete("/users/:userId/cart", );
+
+//-------------------------------------------------------------------------------------------------------------------
+
+
+//Order
+
+// router.post("/users/:userId/orders", );
+
+// router.put("/users/:userId/orders", );
 
 module.exports = router;
