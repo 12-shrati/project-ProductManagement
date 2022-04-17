@@ -1,21 +1,21 @@
 {
-  "name": "titaniumaplus",
+  "name": "product-management",
   "version": "1.0.0",
-  "description": "repo for assignments and practice problems",
+  "description": "product-management project",
   "main": "index.js",
   "scripts": {
     "start": "nodemon src/index.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sabihak89/titaniumaplus.git"
+    "url": "git+https://github.com/12-shrati/project-productsManagement.git"
   },
-  "author": "functionUp",
+  "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/sabihak89/titaniumaplus/issues"
+    "url": "https:https://github.com/12-shrati/project-productsManagement.git"
   },
-  "homepage": "https://github.com/sabihak89/titaniumaplus#readme",
+  "homepage": "https:https://github.com/12-shrati/project-productsManagement.git",
   "dependencies": {
     "aws-sdk": "^2.1106.0",
     "bcrypt": "^5.0.1",

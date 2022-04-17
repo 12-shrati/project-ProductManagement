@@ -19,8 +19,12 @@ const isValidObjectId = function (ObjectId) {
 }
 
 
-let isValidateSize = function (value) {
-    return ["S", "XS", "M", "X", "L", "XXL", "XL"].indexOf(value) != -1
+// let isValidateSize = function (value) {
+//     return ["S", "XS", "M", "X", "L", "XXL", "XL"].includes(value) 
+// }
+
+let isValidNumber = function (value) {
+    if (!isNaN(value)) return true
 }
 
 
@@ -75,11 +79,15 @@ const createProduct = async (req, res) => {
         else {
             return res.status(400).send({ status: false, message: "productImage is required" })
         }
-
-        if (!isValidateSize(availableSizes)) {
-            return res.status(400).send({ status: false, message: "Availablesize atleast one of the size in S, XS, M, X, L, XXL, XL" })
+        
+        let sizeArray = availableSizes.split(",").map(x => x.trim())
+        for (let i = 0; i < sizeArray.length; i++) {
+            if (!(["S", "XS", "M", "X", "L", "XXL", "XL"].includes(sizeArray[i]))) {
+                return res.status(400).send({ status: false, message: `Available Sizes must be among ${["S", "XS", "M", "X", "L", "XXL", "XL"]}` })
+            }
         }
 
+        
         let productData = {
             title,
             description,
@@ -88,7 +96,7 @@ const createProduct = async (req, res) => {
             currencyFormat,
             productImage: data.productImage,
             style,
-            availableSizes,
+            availableSizes:sizeArray,
             installments
         }
 
@@ -96,7 +104,6 @@ const createProduct = async (req, res) => {
         return res.status(201).send({ status: true, message: "Success", data: productDetails })
     }
     catch (error) {
-        console.log(error)
         return res.status(500).send({ status: false, message: error.message })
     }
 }
@@ -123,27 +130,34 @@ let getProductsByfilter = async function (req, res) {
             }
         }
         let productName = []
-        if (name!=null) {
+        if (name != null) {
             const productTitle = await productModel.find({ isDeleted: false }).select({ title: 1, _id: 0 })
             for (let i = 0; i < productTitle.length; i++) {
                 var checkTitle = productTitle[i].title
 
                 let includeChar = checkTitle.includes(name)
-                if (includeChar) 
-                productName.push(checkTitle)
-            
-            filter['title'] = productName
+                if (includeChar)
+                    productName.push(checkTitle)
+
+                filter['title'] = productName
             }
         }
 
         if (priceGreaterThan) {
+            if(!isValidNumber(priceGreaterThan)){
+                return res.status(400).send({status:false,message:"PriceGreaterThan must be a number "})
+            }
             filter['price'] = { $gt: priceGreaterThan }
         }
 
         if (priceLesserThan) {
+            if(!isValidNumber(priceLesserThan)){
+                return res.status(400).send({status:false,message:"PriceLesserThan must be a number "})
+            }
             filter['price'] = { $lt: priceLesserThan }
         }
         if (priceGreaterThan && priceLesserThan) {
+            
             filter['price'] = { $gt: priceGreaterThan, $lt: priceLesserThan }
         }
 
@@ -153,13 +167,13 @@ let getProductsByfilter = async function (req, res) {
             }
         }
 
-            const productsData = await productModel.find(filter).sort({ price: priceSort })
+        const productsData = await productModel.find(filter).sort({ price: priceSort })
 
-            if (productsData.length == 0) {
-                return res.status(400).send({ status: false, message: "No product Exist" })
-            }
-            return res.status(200).send({ status: true, message: 'product list', data: productsData })
-        
+        if (productsData.length == 0) {
+            return res.status(400).send({ status: false, message: "No product Exist" })
+        }
+        return res.status(200).send({ status: true, message: 'product list', data: productsData })
+
     }
     catch (error) {
         return res.status(500).send({ status: false, message: error.message })
@@ -267,7 +281,6 @@ const updatedProducts = async function (req, res) {
             }
             updatedData['availableSizes'] = availableSizes
         }
-
 
         if (isValid(style)) {
             updatedData['style'] = style

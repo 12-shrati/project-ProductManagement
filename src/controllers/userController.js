@@ -28,6 +28,10 @@ let validatephone = function (phone) {
     return /^(?:(?:\+|0{0,2})91(\s*[\-]\s*)?|[0]?)?[6789]\d{9}$/.test(phone)
 }
 
+let char=function(value){
+    return /^[A-Za-z\s]+$/.test(value)
+}
+
 let validateString = function (value) {
     return /^\S*$/.test(value)
 }
@@ -35,6 +39,7 @@ let validateString = function (value) {
 let isValidPincode = function (value) {
     if (!isNaN(value) && value.toString().length == 6) return true
 }
+
 
 const createUser = async (req, res) => {
     try {
@@ -49,7 +54,7 @@ const createUser = async (req, res) => {
             return res.status(400).send({ status: false, message: "fname is required" })
         }
 
-        if (!(/^[A-Za-z\s]+$/).test(fname)) {
+        if (!char(fname)) {
             return res.status(400).send({ status: false, message: "Please mention valid firstName" })
         }
 
@@ -61,7 +66,7 @@ const createUser = async (req, res) => {
             return res.status(400).send({ status: false, message: "lname is required" })
         }
 
-        if (!(/^[A-Za-z\s]+$/).test(lname)) {
+        if (!char(lname)) {
             return res.status(400).send({ status: false, message: "Please mention valid lastname" })
         }
 
@@ -130,6 +135,10 @@ const createUser = async (req, res) => {
         if (!isValid(address.shipping.city)) {
             return res.status(400).send({ status: false, message: "Shipping city is required" })
         }
+        if (!char(address.shipping.city)) {
+            return res.status(400).send({ status: false, message: "Please mention valid shipping city" })
+        }
+
         if (!isValid(address.shipping.pincode)) {
             return res.status(400).send({ status: false, message: "Shipping pincode is required" })
         }
@@ -145,6 +154,11 @@ const createUser = async (req, res) => {
         if (!isValid(address.billing.city)) {
             return res.status(400).send({ status: false, message: "Billing city is required" })
         }
+
+        if (!char(address.billing.city)) {
+            return res.status(400).send({ status: false, message: "Please mention valid billing city" })
+        }
+
         if (!isValid(address.billing.pincode)) {
             return res.status(400).send({ status: false, message: "Billing pincode is required" })
         }
@@ -283,7 +297,7 @@ const updateProfile = async function (req, res) {
         if (!isValidRequestBody(data)) { return res.status(400).send({ status: false, message: "Enter value to be updating..." }) }
 
         if (isValid(fname)) {
-            if (!(/^[A-Za-z\s]+$/).test(fname)) {
+            if (!char(fname)) {
                 return res.status(400).send({ status: false, message: "Please mention valid firstName" })
             }
     
@@ -294,7 +308,7 @@ const updateProfile = async function (req, res) {
         }
 
         if (isValid(lname)){
-            if (!(/^[A-Za-z\s]+$/).test(lname)) {
+            if (!char(lname)) {
                 return res.status(400).send({ status: false, message: "Please mention valid lastname" })
             }
     
@@ -363,6 +377,9 @@ const updateProfile = async function (req, res) {
                     updatedData['address.shipping.street'] = address.shipping.street
                 }
                 if (isValid(address.shipping.city)) {
+                    if (!char(address.shipping.city)) {
+                        return res.status(400).send({ status: false, message: "Please mention valid shipping city" })
+                    }
                     updatedData['address.shipping.city'] = address.shipping.city
                 }
                 if (isValid(address.shipping.pincode)) {
@@ -380,6 +397,9 @@ const updateProfile = async function (req, res) {
                     updatedData['address.billing.street'] = address.billing.street
                 }
                 if (isValid(address.billing.city)) {
+                    if (!char(address.billing.city)) {
+                        return res.status(400).send({ status: false, message: "Please mention valid billing city" })
+                    }
                     updatedData['address.billing.city'] = address.billing.city
                 }
                 if (isValid(address.billing.pincode)) {
