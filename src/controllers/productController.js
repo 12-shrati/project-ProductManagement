@@ -6,7 +6,6 @@ let s3 = require('../s3/aws')
 const isValid = function (value) {
     if (typeof value === "undefined" || value === null) return false
     if (typeof value === 'string' && value.trim().length === 0) return false
-    if (typeof value === 'Number' && value.trim().length === 0) return false
     return true
 }
 
@@ -18,11 +17,6 @@ const isValidObjectId = function (ObjectId) {
     return mongoose.Types.ObjectId.isValid(ObjectId)
 }
 
-
-// let isValidateSize = function (value) {
-//     return ["S", "XS", "M", "X", "L", "XXL", "XL"].includes(value) 
-// }
-
 let isValidNumber = function (value) {
     if (!isNaN(value)) return true
 }
@@ -32,14 +26,11 @@ let isValidNumber = function (value) {
 
 const createProduct = async (req, res) => {
     try {
-
-        //Checking if no data is present in our request body
         let data = req.body
         if (!isValidRequestBody(data)) {
             return res.status(400).send({ status: false, message: "Please enter details of product" })
         }
 
-        //Checking if user has entered these mandatory fields or not
         const { title, description, price, currencyId, currencyFormat, productImage, availableSizes, style, installments } = data
 
         if (!isValid(title)) {
@@ -53,7 +44,6 @@ const createProduct = async (req, res) => {
         if (!isValid(description)) {
             return res.status(400).send({ status: false, message: "description is required" })
         }
-
 
         if (!isValid(price)) {
             return res.status(400).send({ status: false, message: "price is required" })
@@ -70,7 +60,6 @@ const createProduct = async (req, res) => {
             return res.status(400).send({ status: false, message: "currencyFormat is required" })
         }
 
-
         let files = req.files
         if (files && files.length > 0) {
             let uploadedFileURL = await s3.uploadFile(files[0])
@@ -79,7 +68,7 @@ const createProduct = async (req, res) => {
         else {
             return res.status(400).send({ status: false, message: "productImage is required" })
         }
-        
+
         let sizeArray = availableSizes.split(",").map(x => x.trim())
         for (let i = 0; i < sizeArray.length; i++) {
             if (!(["S", "XS", "M", "X", "L", "XXL", "XL"].includes(sizeArray[i]))) {
@@ -87,7 +76,6 @@ const createProduct = async (req, res) => {
             }
         }
 
-        
         let productData = {
             title,
             description,
@@ -96,7 +84,7 @@ const createProduct = async (req, res) => {
             currencyFormat,
             productImage: data.productImage,
             style,
-            availableSizes:sizeArray,
+            availableSizes: sizeArray,
             installments
         }
 
@@ -116,16 +104,17 @@ let getProductsByfilter = async function (req, res) {
         const { size, name, priceGreaterThan, priceLesserThan, priceSort } = QueryParam
 
         if (!isValidRequestBody(QueryParam)) {
-            const productsNotDeleted = await productModel.find({ isDeleted: false }).sort({ title: 1 })
+            const productsNotDeleted = await productModel.find({ isDeleted: false })
             return res.status(200).send({ status: true, data: productsNotDeleted })
         }
 
         const filter = { isDeleted: false }
 
         if (size) {
-            for (let i = 0; i < size.length; i++) {
-                if (["S", "XS", "M", "X", "L", "XXL", "XL"].includes(size[i])) {
-                    filter['availableSizes'] = size
+            let asize = size.split(",").map(x => x.trim())
+            for (let i = 0; i < asize.length; i++) {
+                if (["S", "XS", "M", "X", "L", "XXL", "XL"].includes(asize[i])) {
+                    filter['availableSizes'] = asize
                 }
             }
         }
@@ -144,20 +133,20 @@ let getProductsByfilter = async function (req, res) {
         }
 
         if (priceGreaterThan) {
-            if(!isValidNumber(priceGreaterThan)){
-                return res.status(400).send({status:false,message:"PriceGreaterThan must be a number "})
+            if (!isValidNumber(priceGreaterThan)) {
+                return res.status(400).send({ status: false, message: "PriceGreaterThan must be a number " })
             }
             filter['price'] = { $gt: priceGreaterThan }
         }
 
         if (priceLesserThan) {
-            if(!isValidNumber(priceLesserThan)){
-                return res.status(400).send({status:false,message:"PriceLesserThan must be a number "})
+            if (!isValidNumber(priceLesserThan)) {
+                return res.status(400).send({ status: false, message: "PriceLesserThan must be a number " })
             }
             filter['price'] = { $lt: priceLesserThan }
         }
         if (priceGreaterThan && priceLesserThan) {
-            
+
             filter['price'] = { $gt: priceGreaterThan, $lt: priceLesserThan }
         }
 
@@ -200,7 +189,6 @@ let getProductsById = async function (req, res) {
             return res.status(400).send({ status: false, message: "product already Deleted" })
         }
 
-
         return res.status(200).send({ status: true, message: "Product details", data: productData })
 
     }
@@ -232,10 +220,9 @@ const updatedProducts = async function (req, res) {
             return res.status(400).send({ status: false, message: "product already Deleted" })
         }
         let data = req.body
-        const { title, description, price, currencyId, productImage, availableSizes, style, installments } = data
+        const { title, description, price, currencyId,currencyFormat, productImage, availableSizes, style, installments } = data
 
         let updatedData = {}
-        if (!isValidRequestBody(data)) { return res.status(400).send({ status: false, message: "Enter value to be updating..." }) }
 
         if (isValid(title)) {
             let uniqueTitle = await productModel.findOne({ title: title })
@@ -275,12 +262,19 @@ const updatedProducts = async function (req, res) {
             updatedData['currencyId'] = currencyId
         }
 
-        if (isValid(availableSizes)) {
-            if (!isValidateSize(availableSizes)) {
-                return res.status(400).send({ status: false, message: "Availablesize atleast one of the size in S, XS, M, X, L, XXL, XL" })
-            }
-            updatedData['availableSizes'] = availableSizes
+        if (isValid(currencyFormat)) {
+            updatedData['currencyFormat'] = currencyFormat
         }
+
+        if (isValid(availableSizes)) {
+        let sizeArray = availableSizes.split(",").map(x => x.trim())
+        for (let i = 0; i < sizeArray.length; i++) {
+            if (!(["S", "XS", "M", "X", "L", "XXL", "XL"].includes(sizeArray[i]))) {
+                return res.status(400).send({ status: false, message: `Available Sizes must be among ${["S", "XS", "M", "X", "L", "XXL", "XL"]}` })
+            }
+        }
+        updatedData['availableSizes'] = sizeArray
+    }
 
         if (isValid(style)) {
             updatedData['style'] = style
@@ -288,6 +282,10 @@ const updatedProducts = async function (req, res) {
 
         if (isValid(installments)) {
             updatedData['installments'] = installments
+        }
+
+        if(!isValidRequestBody(data) && !files){
+            return res.status(200).send({ status: true, message: "product details", data: productData })
         }
 
         let updatedDetails = await productModel.findByIdAndUpdate(productId, { $set: updatedData }, { new: true })
@@ -317,9 +315,8 @@ let deleteProducts = async function (req, res) {
             return res.status(404).send({ status: false, message: "product not present in the collection" })
         }
         if (productData.isDeleted == true) {
-            return res.status(400).send({ status: false, message: "product  already Deleted" })
+            return res.status(404).send({ status: false, message: "product  already Deleted" })
         }
-
 
         let deletedProductDetails = await productModel.findByIdAndUpdate(productId, { $set: { isDeleted: true, deletedAt: Date() } }, { new: true })
         return res.status(200).send({ status: true, message: "product deleted successfully", data: deletedProductDetails })

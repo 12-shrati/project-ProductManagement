@@ -7,7 +7,6 @@ let s3 = require('../s3/aws')
 const isValid = function (value) {
     if (typeof value === "undefined" || value === null) return false
     if (typeof value === 'string' && value.trim().length === 0) return false
-    if (typeof value === 'Number' && value.trim().length === 0) return false
     return true
 }
 
@@ -40,6 +39,7 @@ let isValidPincode = function (value) {
     if (!isNaN(value) && value.toString().length == 6) return true
 }
 
+//--------------------------------------------------------------------------------------------------------------
 
 const createUser = async (req, res) => {
     try {
@@ -89,8 +89,6 @@ const createUser = async (req, res) => {
 
         let files = req.files
         if (files && files.length > 0) {
-            //upload to s3 and get the uploaded link
-            // res.send the link back to frontend/postman
             let uploadedFileURL = await s3.uploadFile(files[0])
             data['profileImage'] = uploadedFileURL
         }
@@ -128,7 +126,9 @@ const createUser = async (req, res) => {
         const hashedPassword = bcrypt.hashSync(password, salt);
         data.password = hashedPassword
         
-
+        if(!address){
+            return res.status(400).send({ status: false, message: "Address is required" })  
+        }
         if (!isValid(address.shipping.street)) {
             return res.status(400).send({ status: false, message: "Shipping Street is required" })
         }
@@ -147,7 +147,6 @@ const createUser = async (req, res) => {
             return res.status(400).send({ status: false, message: "Pincode should be numeric and length is 6" })
         }
     
-
         if (!isValid(address.billing.street)) {
             return res.status(400).send({ status: false, message: "Billing Street is required" })
         }
@@ -166,12 +165,10 @@ const createUser = async (req, res) => {
             return res.status(400).send({ status: false, message: "Pincode should be numeric and length is 6" })
         }
 
-        //If all these validations passed , registering a user
         let UserData = await userModel.create(data)
         return res.status(201).send({ status: true, message: "You're registered successfully", data: UserData })
     }
 
-    //Exceptional error handling
     catch (error) {
         return res.status(500).send({ status: false, message: error.message })
     }
@@ -181,13 +178,11 @@ const createUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
     try {
-        //Checking if no data is present in our request
         let data = req.body
         if (!isValidRequestBody(data)) {
             return res.status(400).send({ status: false, message: "Please enter your details to login" })
         }
 
-        //Checking if user has entered these mandatory fields or not
         const { email, password } = data
 
         if (!isValid(email)) {
@@ -202,12 +197,11 @@ const loginUser = async (req, res) => {
             return res.status(400).send({ status: false, message: "Password is required" })
         }
 
-        //Matching that email  with a user document in our UserModel
         const userMatch = await userModel.findOne({ email: email })
         if (!userMatch) {
             return res.status(401).send({ status: false, message: "Invalid Email address" })
         }
-        // make a comparison between entered password and the database password
+        
         const validUserPassword = await bcrypt.compare(
             password,
             userMatch.password
@@ -216,7 +210,6 @@ const loginUser = async (req, res) => {
             return res.status(401).send({ status: false, message: "Invalid password" });
         }
 
-        //Creating a token if email and password matches
         const token = jwt.sign({
             userId: userMatch._id,
             iat: Math.floor(Date.now() / 1000),
@@ -232,7 +225,7 @@ const loginUser = async (req, res) => {
         })
 
     }
-    //Exceptional error handling
+    
     catch (error) {
         return res.status(500).send({ status: false, message: error.message })
     }
@@ -291,11 +284,10 @@ const updateProfile = async function (req, res) {
             return res.status(403).send({ status: false, message: "User is not Authorized" })
         }
         let data = req.body
-        const { fname, lname, email, phone,profileImage, password, address } = data
+        const { fname, lname, email, phone, password, address } = data
 
         let updatedData = {}
-        if (!isValidRequestBody(data)) { return res.status(400).send({ status: false, message: "Enter value to be updating..." }) }
-
+        
         if (isValid(fname)) {
             if (!char(fname)) {
                 return res.status(400).send({ status: false, message: "Please mention valid firstName" })
@@ -328,11 +320,9 @@ const updateProfile = async function (req, res) {
             }
             updatedData['email'] = email
         }
-
+        
         let files = req.files
         if (files && files.length > 0) {
-            //upload to s3 and get the uploaded link
-            // res.send the link back to frontend/postman
             let uploadedFileURL = await s3.uploadFile(files[0])
             data['profileImage'] = uploadedFileURL
             updatedData['profileImage'] = data.profileImage
@@ -341,8 +331,7 @@ const updateProfile = async function (req, res) {
             updatedData['profileImage'] = userData.profileImage
             
         }
-        
-
+    
         if (phone) {
             if (!validatephone(phone)) {
                 return res.status(400).send({ status: false, msg: "Invalid PhoneNumber" })
@@ -368,7 +357,6 @@ const updateProfile = async function (req, res) {
 
             updatedData['password'] = data.password
         }
-
 
         if (address) {
             if (isValid(address.shipping)) {
@@ -411,6 +399,10 @@ const updateProfile = async function (req, res) {
                 }
             }
 
+        }
+
+        if(!isValidRequestBody(data) && !files){
+            return res.status(200).send({ status: true, message: "User details", data: userData })
         }
 
         let updatedDetails = await userModel.findByIdAndUpdate(userId, { $set: updatedData }, { new: true })

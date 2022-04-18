@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema({
     profileImage: {
         type: String,
         required: true
-    }, // s3 link
+    },
     phone: {
         type: String, 
         required: true,
@@ -34,7 +34,7 @@ const userSchema = new mongoose.Schema({
         minLen: 8,
         maxLen: 15,
         trim:true
-    }, // encrypted password
+    }, 
     address: {
       shipping: {
         street: {
@@ -71,6 +71,6 @@ const userSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-//creating a model from schema and export it 
+ 
 module.exports = mongoose.model('user', userSchema)
 
