@@ -114,7 +114,7 @@ const updateOrder = async function (req, res) {
         }
 
         const data = req.body
-        const { orderId } = data
+        const { status,orderId } = data
         if (!isValidRequestBody(data)) {
             return res.status(400).send({ status: false, message: "Enter data" });
         }
@@ -134,13 +134,24 @@ const updateOrder = async function (req, res) {
         if (orderData.userId != userId) {
             return res.status(400).send({ status: false, message: "This user not have any order" });
         }
+        if (!isValid(status)) {
+            return res.status(400).send({ status: false, message: "Enter a status" });
+        }
+
+        if(!['pending', 'completed', 'cancled'].indexOf(status)){
+            return res.status(400).send({ status: false, message: "status sould be one of the pending, completed, cancled" });
+        }
 
         if (orderData.status == "completed") {
             return res.status(400).send({ status: false, message: "order is already get completed" });
         }
 
+        if (orderData.status == "cancled") {
+            return res.status(400).send({ status: false, message: "order is already get cancelled" });
+        }
+        
         if (orderData.cancellable == true) {
-            let updatedData = await orderModel.findOneAndUpdate({ _id: orderId }, { $set: { status: "cancled" } }, { new: true })
+            let updatedData = await orderModel.findOneAndUpdate({ _id: orderId }, { $set: { status: status } }, { new: true })
             return res.status(200).send({ status: false, message: "Order cancelled Successfully", data: updatedData });
         }
 
