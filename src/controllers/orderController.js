@@ -136,15 +136,15 @@ const updateOrder = async function (req, res) {
             return res.status(400).send({ status: false, message: "Enter a status" });
         }
 
-        if (['pending', 'completed', 'cancled'].indexOf(status)==-1) {
-            return res.status(400).send({ status: false, message: "status sould be one of the pending, completed, cancled" });
+        if (['pending', 'completed', 'cancelled'].indexOf(status)==-1) {
+            return res.status(400).send({ status: false, message: "status sould be one of the pending, completed, cancelled" });
         }
 
         if (orderData.status == "completed") {
             return res.status(400).send({ status: false, message: "order is already get completed" });
         }
 
-        if (orderData.status == "cancled") {
+        if (orderData.status == "cancelled") {
             return res.status(400).send({ status: false, message: "order is already get cancelled" });
         }
 
