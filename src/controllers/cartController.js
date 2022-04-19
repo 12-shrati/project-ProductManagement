@@ -181,8 +181,8 @@ const updatedCart = async function (req, res) {
             return res.status(200).send({ status: true, msg: "cart removed successfully", data: updatedDetails })
           }
         }
-        return res.status(400).send({ status: true, msg: "This product not present in cart" })
       }
+      return res.status(400).send({ status: true, msg: "This product not present in cart" })
     }
 
     if (removeProduct == 0) {
@@ -194,8 +194,8 @@ const updatedCart = async function (req, res) {
           let updatedCartDetails = await cartModel.findOneAndUpdate({ _id: cartId }, { items: cartDetails.items, totalItems: totalItem, totalPrice: newPrice }, { new: true })
           return res.status(200).send({ status: true, msg: "item removed successfully", data: updatedCartDetails })
         }
-        return res.status(400).send({ status: true, msg: "This product not present in cart" })
       }
+      return res.status(400).send({ status: true, msg: "This product not present in cart" })
     }
 
   }
@@ -270,7 +270,7 @@ const deleteCart = async (req, res) => {
       { new: true }
     );
 
-    return res.status(200).send({ status: true, message: "successfully found cart.", data: deleteChanges });
+    return res.status(200).send({ status: true, message: "Successfully remove items", data: deleteChanges });
   } catch (error) {
     return res.status(500).send({ status: false, message: error.message });
   }
