@@ -54,39 +54,37 @@ let createOrder = async function (req, res) {
             return res.status(400).send({ status: false, message: "Enter a valid cartId" });
         }
         const cartAlreadyPresent = await cartModel.findOne({ _id: cartId });
-        if (!cartAlreadyPresent) {
+        if(!cartAlreadyPresent){
             return res.status(404).send({ status: false, message: "cart not found" });
         }
-
-        if (cartAlreadyPresent.userId != userId) {
+        if(cartAlreadyPresent.userId!=userId){
             return res.status(400).send({ status: false, message: "With this user cart is not created" });
         }
-
-        if (cartAlreadyPresent.totalItems == 0) {
+        if(cartAlreadyPresent.totalItems==0){
             return res.status(400).send({ status: "SUCCESS", message: "There is no product to order ,First add product" })
-        }
+          }
 
-        let totalPrice = cartAlreadyPresent.totalPrice;
-        let totalItems = cartAlreadyPresent.items.length
-        let totalQuantity = 0
+            let totalPrice = cartAlreadyPresent.totalPrice;
+            let totalItems= cartAlreadyPresent.items.length
+            let totalQuantity = 0
 
-        let itemsArr = cartAlreadyPresent.items
-        for (i in itemsArr) {
-            totalQuantity += itemsArr[i].quantity
-
-        }
-
+            let itemsArr = cartAlreadyPresent.items
+            for (i in itemsArr) {
+                    totalQuantity+=itemsArr[i].quantity
+                    
+            }
+        
         let newOrder = {
-            userId: userId,
-            items: cartAlreadyPresent.items,
-            totalPrice: totalPrice,
-            totalItems: totalItems,
-            totalQuantity: totalQuantity
+            userId:userId,
+            items:cartAlreadyPresent.items,
+            totalPrice:totalPrice,
+            totalItems:totalItems,
+            totalQuantity:totalQuantity
         };
 
         orderData = await orderModel.create(newOrder);
         return res.status(200).send({ status: "SUCCESS", message: "Order placed successfully", data: orderData });
-
+     
     }
     catch (error) {
         return res.status(500).send({ status: false, message: error.message })
@@ -114,7 +112,7 @@ const updateOrder = async function (req, res) {
         }
 
         const data = req.body
-        const { status,orderId } = data
+        const { status, orderId } = data
         if (!isValidRequestBody(data)) {
             return res.status(400).send({ status: false, message: "Enter data" });
         }
@@ -138,7 +136,7 @@ const updateOrder = async function (req, res) {
             return res.status(400).send({ status: false, message: "Enter a status" });
         }
 
-        if(!['pending', 'completed', 'cancled'].indexOf(status)){
+        if (['pending', 'completed', 'cancled'].indexOf(status)==-1) {
             return res.status(400).send({ status: false, message: "status sould be one of the pending, completed, cancled" });
         }
 
@@ -149,7 +147,7 @@ const updateOrder = async function (req, res) {
         if (orderData.status == "cancled") {
             return res.status(400).send({ status: false, message: "order is already get cancelled" });
         }
-        
+
         if (orderData.cancellable == true) {
             let updatedData = await orderModel.findOneAndUpdate({ _id: orderId }, { $set: { status: status } }, { new: true })
             return res.status(200).send({ status: false, message: "Order cancelled Successfully", data: updatedData });

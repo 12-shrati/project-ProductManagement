@@ -402,7 +402,7 @@ const updateProfile = async function (req, res) {
         }
 
         if(!isValidRequestBody(data) && !files){
-            return res.status(200).send({ status: true, message: "User details", data: userData })
+            return res.status(400).send({ status: true, message: "Enter data to be updating..."})
         }
 
         let updatedDetails = await userModel.findByIdAndUpdate(userId, { $set: updatedData }, { new: true })

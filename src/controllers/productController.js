@@ -75,6 +75,10 @@ const createProduct = async (req, res) => {
                 return res.status(400).send({ status: false, message: `Available Sizes must be among ${["S", "XS", "M", "X", "L", "XXL", "XL"]}` })
             }
         }
+        if (!isValidNumber(installments)) {
+            return res.status(400).send({ status: false, message: "Installment should be a number" })
+        }
+
 
         let productData = {
             title,
@@ -220,7 +224,7 @@ const updatedProducts = async function (req, res) {
             return res.status(400).send({ status: false, message: "product already Deleted" })
         }
         let data = req.body
-        const { title, description, price, currencyId,currencyFormat, productImage, availableSizes, style, installments } = data
+        const { title, description, price, currencyId, currencyFormat, productImage, availableSizes, style, installments } = data
 
         let updatedData = {}
 
@@ -267,14 +271,14 @@ const updatedProducts = async function (req, res) {
         }
 
         if (isValid(availableSizes)) {
-        let sizeArray = availableSizes.split(",").map(x => x.trim())
-        for (let i = 0; i < sizeArray.length; i++) {
-            if (!(["S", "XS", "M", "X", "L", "XXL", "XL"].includes(sizeArray[i]))) {
-                return res.status(400).send({ status: false, message: `Available Sizes must be among ${["S", "XS", "M", "X", "L", "XXL", "XL"]}` })
+            let sizeArray = availableSizes.split(",").map(x => x.trim())
+            for (let i = 0; i < sizeArray.length; i++) {
+                if (!(["S", "XS", "M", "X", "L", "XXL", "XL"].includes(sizeArray[i]))) {
+                    return res.status(400).send({ status: false, message: `Available Sizes must be among ${["S", "XS", "M", "X", "L", "XXL", "XL"]}` })
+                }
             }
+            updatedData['availableSizes'] = sizeArray
         }
-        updatedData['availableSizes'] = sizeArray
-    }
 
         if (isValid(style)) {
             updatedData['style'] = style
@@ -284,8 +288,8 @@ const updatedProducts = async function (req, res) {
             updatedData['installments'] = installments
         }
 
-        if(!isValidRequestBody(data) && !files){
-            return res.status(200).send({ status: true, message: "product details", data: productData })
+        if (!isValidRequestBody(data) && !files) {
+            return res.status(400).send({ status: true, message: "Enter data to be updating..." })
         }
 
         let updatedDetails = await productModel.findByIdAndUpdate(productId, { $set: updatedData }, { new: true })
