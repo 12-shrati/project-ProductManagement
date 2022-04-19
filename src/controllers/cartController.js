@@ -69,7 +69,7 @@ let createCart = async function (req, res) {
     
 
     let totalItems =items.length;
-    let totalPrice = product.price * totalItems;
+    let totalPrice = product.price * items[0].quantity;
 
     if (cartAlreadyPresent) {
 
