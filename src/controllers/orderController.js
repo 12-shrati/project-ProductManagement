@@ -61,7 +61,7 @@ let createOrder = async function (req, res) {
             return res.status(400).send({ status: false, message: "With this user cart is not created" });
         }
         if(cartAlreadyPresent.totalItems==0){
-            return res.status(400).send({ status: "SUCCESS", message: "There is no product to order ,First add product" })
+            return res.status(400).send({ status: false, message: "There is no product to order ,First add product" })
           }
 
             let totalPrice = cartAlreadyPresent.totalPrice;
@@ -83,7 +83,7 @@ let createOrder = async function (req, res) {
         };
 
         orderData = await orderModel.create(newOrder);
-        return res.status(200).send({ status: "SUCCESS", message: "Order placed successfully", data: orderData });
+        return res.status(200).send({ status: true, message: "Order placed successfully", data: orderData });
      
     }
     catch (error) {
