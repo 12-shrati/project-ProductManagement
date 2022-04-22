@@ -1,7 +1,7 @@
 const productModel = require('../models/productModel')
 const mongoose = require('mongoose')
 let s3 = require('../s3/aws')
-
+let curency = require('currency-symbol-map')
 
 const isValid = function (value) {
     if (typeof value === "undefined" || value === null) return false
@@ -31,7 +31,7 @@ const createProduct = async (req, res) => {
             return res.status(400).send({ status: false, message: "Please enter details of product" })
         }
 
-        const { title, description, price, currencyId, currencyFormat, productImage, availableSizes, style, installments } = data
+        const { title, description, price, currencyId, isFreeShipping, availableSizes, style, installments } = data
 
         if (!isValid(title)) {
             return res.status(400).send({ status: false, message: "title is required" })
@@ -48,16 +48,22 @@ const createProduct = async (req, res) => {
         if (!isValid(price)) {
             return res.status(400).send({ status: false, message: "price is required" })
         }
-        if (!/^\d+(?:\.\d{1,2})?$/.test(price)) {
-            return res.status(400).send({ status: false, message: "Enter valid price" })
+        if (!isValidNumber(price)) {
+            return res.status(400).send({ status: false, message: "price is should be a number" })
+        }
+        if (price <= 0) {
+            return res.status(400).send({ status: false, message: "price greater than 0" })
         }
 
         if (!isValid(currencyId)) {
             return res.status(400).send({ status: false, message: "currencyId is required" })
         }
+        if (!(currencyId == 'INR')) {
+            return res.status(400).send({ status: false, message: "currencyId should be INR" })
+        }
 
-        if (!isValid(currencyFormat)) {
-            return res.status(400).send({ status: false, message: "currencyFormat is required" })
+        if (!((isFreeShipping == 'true') || (isFreeShipping == 'false'))) {
+            return res.status(400).send({ status: false, message: "isFreeShipping is boolean value" })
         }
 
         let files = req.files
@@ -85,7 +91,7 @@ const createProduct = async (req, res) => {
             description,
             price,
             currencyId,
-            currencyFormat,
+            currencyFormat: curency(currencyId),
             productImage: data.productImage,
             style,
             availableSizes: sizeArray,
@@ -122,23 +128,19 @@ let getProductsByfilter = async function (req, res) {
                 }
             }
         }
-        let productName = []
-        if (name != null) {
-            const productTitle = await productModel.find({ isDeleted: false }).select({ title: 1, _id: 0 })
-            for (let i = 0; i < productTitle.length; i++) {
-                var checkTitle = productTitle[i].title
 
-                let includeChar = checkTitle.includes(name)
-                if (includeChar)
-                    productName.push(checkTitle)
-
-                filter['title'] = productName
-            }
+        if (isValid(name)) {
+            filter['title'] = {}
+            filter['title']['$regex'] = name
+            filter['title']['$options'] = '$i'
         }
 
         if (priceGreaterThan) {
             if (!isValidNumber(priceGreaterThan)) {
                 return res.status(400).send({ status: false, message: "PriceGreaterThan must be a number " })
+            }
+            if (priceGreaterThan <= 0) {
+                return res.status(400).send({ status: false, message: "PriceGreaterThan should be greter rhan 0" })
             }
             filter['price'] = { $gt: priceGreaterThan }
         }
@@ -147,22 +149,27 @@ let getProductsByfilter = async function (req, res) {
             if (!isValidNumber(priceLesserThan)) {
                 return res.status(400).send({ status: false, message: "PriceLesserThan must be a number " })
             }
+            if (priceLesserThan <= 0) {
+                return res.status(400).send({ status: false, message: "priceLesserThan should be greter rhan 0" })
+            }
             filter['price'] = { $lt: priceLesserThan }
         }
+
         if (priceGreaterThan && priceLesserThan) {
 
             filter['price'] = { $gt: priceGreaterThan, $lt: priceLesserThan }
         }
 
-        if (priceSort) {
+        if ("priceSort" in filter) {
             if (priceSort != 1 || priceSort != -1) {
                 return res.status(400).send({ status: false, message: "You can sort price by using 1 and -1" })
             }
+
         }
 
         const productsData = await productModel.find(filter).sort({ price: priceSort })
 
-        if (productsData.length == 0) {
+        if (Array.isArray(productsData) && productsData.length == 0) {
             return res.status(400).send({ status: false, message: "No product Exist" })
         }
         return res.status(200).send({ status: true, message: 'product list', data: productsData })
@@ -209,8 +216,6 @@ const updatedProducts = async function (req, res) {
     try {
         let productId = req.params.productId
 
-        if (!productId) { return res.status(400).send({ status: false, message: "userid required" }) }
-
         if (!isValidObjectId(productId)) {
             return res.status(400).send({ status: false, message: "UserId not a valid ObjectId" })
         }
@@ -224,7 +229,7 @@ const updatedProducts = async function (req, res) {
             return res.status(400).send({ status: false, message: "product already Deleted" })
         }
         let data = req.body
-        const { title, description, price, currencyId, currencyFormat, productImage, availableSizes, style, installments } = data
+        const { title, description, price, currencyId, availableSizes, style, installments } = data
 
         let updatedData = {}
 
@@ -233,41 +238,46 @@ const updatedProducts = async function (req, res) {
             if (uniqueTitle) {
                 return res.status(400).send({ status: false, message: "Title already exists" })
             }
-            updatedData['title'] = title
+            if (!Object.prototype.hasOwnProperty.call(updatedData, '$set')) updatedData['$set'] = {}
+            updatedData['$set']['title'] = title
         }
 
         if (isValid(description)) {
-            updatedData['description'] = description
+            if (!Object.prototype.hasOwnProperty.call(updatedData, '$set')) updatedData['$set'] = {}
+            updatedData['$set']['description'] = description
         }
 
         if (isValid(price)) {
-            if (!/^\d+(?:\.\d{1,2})?$/.test(price)) {
-                return res.status(400).send({ status: false, message: "Enter valid price" })
+            if (!isValidNumber(price)) {
+                return res.status(400).send({ status: false, message: "price is should be a number" })
             }
-            updatedData['price'] = price
+            if (price <= 0) {
+                return res.status(400).send({ status: false, message: "price greater than 0" })
+            }
+            if (!Object.prototype.hasOwnProperty.call(updatedData, '$set')) updatedData['$set'] = {}
+            updatedData['$set']['price'] = price
         }
 
-        if (isValid(description)) {
-            updatedData['description'] = description
-        }
 
         let files = req.files
         if (files && files.length > 0) {
             let uploadedFileURL = await s3.uploadFile(files[0])
             data['productImage'] = uploadedFileURL
 
-            updatedData['productImage'] = data.productImage
+            if (!Object.prototype.hasOwnProperty.call(updatedData, '$set')) updatedData['$set'] = {}
+            updatedData['$set']['productImage'] = data.productImage
         } else {
 
-            updatedData['productImage'] = productData.productImage
+            if (!Object.prototype.hasOwnProperty.call(updatedData, '$set')) updatedData['$set'] = {}
+            updatedData['$set']['productImage'] = productData.productImage
         }
 
         if (isValid(currencyId)) {
-            updatedData['currencyId'] = currencyId
-        }
-
-        if (isValid(currencyFormat)) {
-            updatedData['currencyFormat'] = currencyFormat
+            if (!(currencyId == 'INR')) {
+                return res.status(400).send({ status: false, message: "currencyId should be INR" })
+            }
+            if (!Object.prototype.hasOwnProperty.call(updatedData, '$set')) updatedData['$set'] = {}
+            updatedData['$set']['currencyId'] = currencyId
         }
 
         if (isValid(availableSizes)) {
@@ -277,22 +287,31 @@ const updatedProducts = async function (req, res) {
                     return res.status(400).send({ status: false, message: `Available Sizes must be among ${["S", "XS", "M", "X", "L", "XXL", "XL"]}` })
                 }
             }
-            updatedData['availableSizes'] = sizeArray
+            if (!Object.prototype.hasOwnProperty.call(updatedData, '$addToSet')) updatedData['$addToSet'] = {}
+
+            if (Array.isArray(sizeArray)) {
+                updatedData['$addToSet']['availableSizes'] = { $each: sizeArray }
+            }
         }
 
         if (isValid(style)) {
-            updatedData['style'] = style
+            if (!Object.prototype.hasOwnProperty.call(updatedData, '$set')) updatedData['$set'] = {}
+            updatedData['$set']['style'] = style
         }
 
         if (isValid(installments)) {
-            updatedData['installments'] = installments
+            if (!isValidNumber(installments)) {
+                return res.status(400).send({ status: false, message: "Installment should be a number" })
+            }
+            if (!Object.prototype.hasOwnProperty.call(updatedData, '$set')) updatedData['$set'] = {}
+            updatedData['$set']['installments'] = installments
         }
 
         if (!isValidRequestBody(data) && !files) {
-            return res.status(400).send({ status: true, message: "Enter data to be updating..." })
+            return res.status(400).send({ status: true, message: "No data passed to modify" })
         }
 
-        let updatedDetails = await productModel.findByIdAndUpdate(productId, { $set: updatedData }, { new: true })
+        let updatedDetails = await productModel.findByIdAndUpdate(productId, updatedData, { new: true })
         return res.status(200).send({ status: true, message: "product updated", data: updatedDetails })
 
     }
@@ -329,7 +348,6 @@ let deleteProducts = async function (req, res) {
         return res.status(500).send({ status: false, message: error.message })
     }
 }
-
 
 
 module.exports = { createProduct, getProductsByfilter, getProductsById, updatedProducts, deleteProducts }

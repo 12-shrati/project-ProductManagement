@@ -27,7 +27,7 @@ let validatephone = function (phone) {
     return /^(?:(?:\+|0{0,2})91(\s*[\-]\s*)?|[0]?)?[6789]\d{9}$/.test(phone)
 }
 
-let char=function(value){
+let char = function (value) {
     return /^[A-Za-z\s]+$/.test(value)
 }
 
@@ -36,7 +36,7 @@ let validateString = function (value) {
 }
 
 let isValidPincode = function (value) {
-    if (!isNaN(value) && value.toString().length == 6) return true
+    if (!isNaN(value) && value.toString(value).length == 6) return true
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ const createUser = async (req, res) => {
             return res.status(400).send({ status: false, message: "Please enter your details to register" })
         }
 
-        const { fname, lname, email, profileImage, phone, password, address } = data
+        const { fname, lname, email, phone, password } = data
 
         if (!isValid(fname)) {
             return res.status(400).send({ status: false, message: "fname is required" })
@@ -89,7 +89,7 @@ const createUser = async (req, res) => {
 
         let files = req.files
         if (files && files.length > 0) {
-            let uploadedFileURL = await s3.uploadFile(files[0])
+            var uploadedFileURL = await s3.uploadFile(files[0])
             data['profileImage'] = uploadedFileURL
         }
         else {
@@ -121,51 +121,55 @@ const createUser = async (req, res) => {
             return res.status(400).send({ status: false, message: "Spaces are not allowed in password" })
         }
 
-        // Hashing the passwords
         const salt = bcrypt.genSaltSync(10);
         const hashedPassword = bcrypt.hashSync(password, salt);
         data.password = hashedPassword
-        
-        if(!address){
-            return res.status(400).send({ status: false, message: "Address is required" })  
-        }
-        if (!isValid(address.shipping.street)) {
-            return res.status(400).send({ status: false, message: "Shipping Street is required" })
-        }
-        if (!isValid(address.shipping.city)) {
-            return res.status(400).send({ status: false, message: "Shipping city is required" })
-        }
-        if (!char(address.shipping.city)) {
-            return res.status(400).send({ status: false, message: "Please mention valid shipping city" })
+
+
+        if(!data.address || Object.keys(data.address).length==0){
+            return res.status(400).send({ status: false, message: "Please provide the Address" }) 
         }
 
-        if (!isValid(address.shipping.pincode)) {
-            return res.status(400).send({ status: false, message: "Shipping pincode is required" })
+        const address = JSON.parse(data.address) 
+        
+        if(!address.shipping || (address.shipping &&(!address.shipping.street||!address.shipping.city||!address.shipping.pincode))){
+            return res.status(400).send({ status: false, message: "Shipping address is required " })
         }
 
         if (!isValidPincode(address.shipping.pincode)) {
-            return res.status(400).send({ status: false, message: "Pincode should be numeric and length is 6" })
-        }
-    
-        if (!isValid(address.billing.street)) {
-            return res.status(400).send({ status: false, message: "Billing Street is required" })
-        }
-        if (!isValid(address.billing.city)) {
-            return res.status(400).send({ status: false, message: "Billing city is required" })
+            return res.status(400).send({ status: false, message: "Please provide the valid pincode in Shipping Address" })    
         }
 
-        if (!char(address.billing.city)) {
-            return res.status(400).send({ status: false, message: "Please mention valid billing city" })
+        if(!address.billing || (address.billing &&(!address.billing.street||!address.billing.city||!address.billing.pincode))){
+            return res.status(400).send({ status: false, message: "billing address is required " })
         }
-
-        if (!isValid(address.billing.pincode)) {
-            return res.status(400).send({ status: false, message: "Billing pincode is required" })
-        }
+        
         if (!isValidPincode(address.billing.pincode)) {
-            return res.status(400).send({ status: false, message: "Pincode should be numeric and length is 6" })
+            return res.status(400).send({ status: false, message: "Please provide the valid pincode in Billing Address" })   
         }
 
-        let UserData = await userModel.create(data)
+        const user = {
+            fname,
+            lname,
+            email,
+            profileImage: data.profileImage,
+            phone,
+            password:data.password,
+            address: {
+                shipping: {
+                    street: address.shipping.street,
+                    city: address.shipping.city,
+                    pincode: address.shipping.pincode
+                },
+                billing: {
+                    street: address.billing.street,
+                    city: address.billing.city,
+                    pincode: address.billing.pincode
+                }
+            }
+        }
+
+        let UserData = await userModel.create(user)
         return res.status(201).send({ status: true, message: "You're registered successfully", data: UserData })
     }
 
@@ -201,7 +205,7 @@ const loginUser = async (req, res) => {
         if (!userMatch) {
             return res.status(401).send({ status: false, message: "Invalid Email address" })
         }
-        
+
         const validUserPassword = await bcrypt.compare(
             password,
             userMatch.password
@@ -225,7 +229,7 @@ const loginUser = async (req, res) => {
         })
 
     }
-    
+
     catch (error) {
         return res.status(500).send({ status: false, message: error.message })
     }
@@ -284,26 +288,26 @@ const updateProfile = async function (req, res) {
             return res.status(403).send({ status: false, message: "User is not Authorized" })
         }
         let data = req.body
-        const { fname, lname, email, phone, password, address } = data
+        const { fname, lname, email, phone, password} = data
 
         let updatedData = {}
-        
+
         if (isValid(fname)) {
             if (!char(fname)) {
                 return res.status(400).send({ status: false, message: "Please mention valid firstName" })
             }
-    
+
             if (!validateString(fname)) {
                 return res.status(400).send({ status: false, message: "Spaces are not allowed in fname" })
             }
             updatedData['fname'] = fname
         }
 
-        if (isValid(lname)){
+        if (isValid(lname)) {
             if (!char(lname)) {
                 return res.status(400).send({ status: false, message: "Please mention valid lastname" })
             }
-    
+
             if (!validateString(lname)) {
                 return res.status(400).send({ status: false, message: "Spaces are not allowed in lname" })
             }
@@ -320,18 +324,18 @@ const updateProfile = async function (req, res) {
             }
             updatedData['email'] = email
         }
-        
+
         let files = req.files
         if (files && files.length > 0) {
             let uploadedFileURL = await s3.uploadFile(files[0])
             data['profileImage'] = uploadedFileURL
             updatedData['profileImage'] = data.profileImage
         } else {
-            
+
             updatedData['profileImage'] = userData.profileImage
-            
+
         }
-    
+
         if (phone) {
             if (!validatephone(phone)) {
                 return res.status(400).send({ status: false, msg: "Invalid PhoneNumber" })
@@ -358,24 +362,27 @@ const updateProfile = async function (req, res) {
             updatedData['password'] = data.password
         }
 
-        if (address) {
-            if (isValid(address.shipping)) {
+        if (data.address) {
+            const address=JSON.parse(data.address)
+            if(Object.keys(address).length>0){
+                const shippingAdress=address.shipping
+            if (shippingAdress) {
 
-                if (isValid(address.shipping.street)) {
-                    updatedData['address.shipping.street'] = address.shipping.street
+                if (shippingAdress.street) {
+                    updatedData['address.shipping.street'] = shippingAdress.street
                 }
-                if (isValid(address.shipping.city)) {
+                if (shippingAdress.city) {
                     if (!char(address.shipping.city)) {
                         return res.status(400).send({ status: false, message: "Please mention valid shipping city" })
                     }
-                    updatedData['address.shipping.city'] = address.shipping.city
+                    updatedData['address.shipping.city'] = shippingAdress.city
                 }
-                if (isValid(address.shipping.pincode)) {
+                if (shippingAdress.pincode) {
 
-                    if (!isValidPincode(address.shipping.pincode)) {
+                    if (!isValidPincode(shippingAdress.pincode)) {
                         return res.status(400).send({ status: false, message: "Pincode should be numeric and length is 6" })
                     }
-                    updatedData['address.shipping.pincode'] = address.shipping.pincode
+                    updatedData['address.shipping.pincode'] = shippingAdress.pincode
 
                 }
             }
@@ -398,14 +405,14 @@ const updateProfile = async function (req, res) {
                     updatedData['address.billing.pincode'] = address.billing.pincode
                 }
             }
-
+        }
         }
 
-        if(!isValidRequestBody(data) && !files){
-            return res.status(400).send({ status: true, message: "Enter data to be updating..."})
+        if (!isValidRequestBody(data) && !files) {
+            return res.status(400).send({ status: true, message: "No data passed to modify the user profile" })
         }
-
-        let updatedDetails = await userModel.findByIdAndUpdate(userId, { $set: updatedData }, { new: true })
+        
+        let updatedDetails = await userModel.findByIdAndUpdate(userId, updatedData , { new: true })
         return res.status(200).send({ status: true, message: "User profile updated", data: updatedDetails })
 
     }
@@ -414,7 +421,6 @@ const updateProfile = async function (req, res) {
         return res.status(500).send({ status: false, message: error.message })
     }
 }
-
 
 
 module.exports = { createUser, loginUser, getProfile, updateProfile }
