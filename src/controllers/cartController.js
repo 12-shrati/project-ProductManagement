@@ -78,21 +78,19 @@ let createCart = async function (req, res) {
 
       return res.status(201).send({ status: "SUCCESS", message: "cart created successfully", data: newCart });
     }
-
-    if (!isValidObjectId(cartId)) {
-      return res.status(400).send({ status: false, message: "enter a valid cartId" });
-    }
-
-    let cart = await cartModel.findOne({ userId: userId })
-    if (cart) {
+    
+    if (cartId) {
+      if (!isValidObjectId(cartId)) {
+        return res.status(400).send({ status: false, message: "enter a valid cartId" });
+      }
 
       const cartAlreadyPresent = await cartModel.findOne({ _id: cartId, userId: userId });
       if (!cartAlreadyPresent) {
         return res.status(400).send({ status: false, message: "Cart does not exist" });
       }
-
+      
       let totalPrice = product.price
-      if (cartId || cartAlreadyPresent) {
+      if (cartAlreadyPresent) {
 
         totalPrice += cartAlreadyPresent.totalPrice;
 
@@ -116,8 +114,8 @@ let createCart = async function (req, res) {
         return res.status(200).send({ status: true, message: `Product added successfully`, data: responseData })
       }
     }
-
   }
+  //}
   catch (error) {
     return res.status(500).send({ status: false, message: error.message })
   }

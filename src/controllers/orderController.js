@@ -94,8 +94,7 @@ let createOrder = async function (req, res) {
         };
 
         orderData = await orderModel.create(newOrder);
-        orderData=await orderData.populate('items.productId',{_id:1,title:1,price:1,productImage:1})
-
+        
         let removeFromCart = await cartModel.findOneAndUpdate(
             { userId: userId },
             { $set: { items: [], totalPrice: 0, totalItems: 0 } },
